@@ -194,6 +194,7 @@ func NewTokenizer(r io.Reader) *Tokenizer {
 func (t *Tokenizer) scanStream() (*Token, error) {
 	state := startState
 	var tokenType TokenType
+	var startSpace []rune
 	var value []rune
 	var nextRune rune
 	var nextRuneType runeTokenClass
@@ -222,6 +223,8 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 					}
 				case spaceRuneClass:
 					{
+						// prepend startSpace when return the Token
+						startSpace = append(startSpace, nextRune)
 					}
 				case escapingQuoteRuneClass:
 					{
@@ -259,7 +262,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 						token := &Token{
 							tokenClass: startRuneType,
 							tokenType:  tokenType,
-							value:      string(value),
+							value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
@@ -268,7 +271,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 						token := &Token{
 							tokenClass: startRuneType,
 							tokenType:  tokenType,
-							value:      string(value),
+							value:      string(append(append(startSpace, value...), nextRune)),
 						}
 						return token, err
 					}
@@ -299,7 +302,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 						token := &Token{
 							tokenClass: startRuneType,
 							tokenType:  tokenType,
-							value:      string(value),
+							value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
@@ -319,7 +322,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 						token := &Token{
 							tokenClass: startRuneType,
 							tokenType:  tokenType,
-							value:      string(value),
+							value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
@@ -339,7 +342,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 						token := &Token{
 							tokenClass: startRuneType,
 							tokenType:  tokenType,
-							value:      string(value),
+							value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
@@ -349,7 +352,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 							token := &Token{
 								tokenClass: startRuneType,
 								tokenType:  tokenType,
-								value:      string(value),
+								value:      string(append(startSpace, value...)),
 							}
 							return token, err
 						}
@@ -374,7 +377,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 						token := &Token{
 							tokenClass: startRuneType,
 							tokenType:  tokenType,
-							value:      string(value),
+							value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
@@ -384,7 +387,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 							token := &Token{
 								tokenClass: startRuneType,
 								tokenType:  tokenType,
-								value:      string(value),
+								value:      string(append(startSpace, value...)),
 							}
 							return token, err
 						}
@@ -404,7 +407,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 						token := &Token{
 							tokenClass: startRuneType,
 							tokenType:  tokenType,
-							value:      string(value),
+							value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
@@ -415,7 +418,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 							token := &Token{
 								tokenClass: startRuneType,
 								tokenType:  tokenType,
-								value:      string(value),
+								value:      string(append(append(startSpace, value...), nextRune)),
 							}
 							return token, err
 						} else {
