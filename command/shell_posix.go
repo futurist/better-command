@@ -17,9 +17,7 @@ import (
 func (c *Command) initCmd(cmd *exec.Cmd) func(*Command) {
 	// Force-enable setpgid bit so that we can kill child processes when the
 	// context is canceled.
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
+	cmd.SysProcAttr.Setpgid = true
 	killChild := func(c *Command) {
 		c.mu.RLock()
 		pid := c.Pid

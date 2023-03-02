@@ -13,6 +13,7 @@ import (
 	"os/user"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/futurist/better-command/shlex"
@@ -247,7 +248,7 @@ func New(cmdArgs []string, parts ...string) *Command {
 		cancel()
 		return nil
 	}
-
+	cmd.SysProcAttr = &syscall.SysProcAttr{}
 	c := &Command{Cmd: *cmd, Ctx: ctx, Cancel: cancel, mu: new(sync.RWMutex)}
 	c.onexit = make([]func(*Command), 0)
 	fn := c.initCmd(cmd)
