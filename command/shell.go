@@ -80,12 +80,13 @@ type Command struct {
 	Pid int
 	// LastError is the last recorded error after chain
 	LastError error
-	// Ctx is the context of the command, can check Err() on OnExit to see if the context be canceled.
-	Ctx     context.Context
-	cancel  context.CancelFunc
+	// Ctx is the context of the command, can check Err() on OnExit to see if the context be canceled
+	Ctx context.Context
+	// Cancel the context of the command, command will be killed, and Ctx.Err() not nil
+	Cancel  context.CancelFunc
 	onstart []func(*Command)
 	onexit  []func(*Command)
-	mu      *sync.Mutex
+	mu      *sync.RWMutex
 }
 
 // sudo will return "sudo" command if non-root, or else ""
@@ -153,9 +154,10 @@ func (c *Command) Context(ctx context.Context) *Command {
 	go func() {
 		select {
 		case <-ctx.Done():
+			c.Cancel()
+			c.Cancel = nil
 		case <-c.Ctx.Done():
 		}
-		c.cancel()
 		c.cleanup()
 	}()
 	return c
@@ -164,7 +166,9 @@ func (c *Command) Context(ctx context.Context) *Command {
 // Timeout run command with timeout, then kill the process.
 func (c *Command) Timeout(timeout time.Duration) *Command {
 	ctx, cancel := context.WithTimeout(c.Ctx, timeout)
+	c.mu.Lock()
 	c.onexit = append(c.onexit, func(c *Command) { cancel() })
+	c.mu.Unlock()
 	return c.Context(ctx)
 }
 
@@ -206,14 +210,18 @@ func (c *Command) Shell(shellName string) *Command {
 
 // OnStart set functions to run when command just started
 func (c *Command) OnStart(f ...func(*Command)) *Command {
+	c.mu.Lock()
 	c.onstart = append(c.onstart, f...)
+	c.mu.Unlock()
 	return c
 }
 
 // OnExit set functions to run when command just exit,
 // here can check the Ctx.Err() etc.
 func (c *Command) OnExit(f ...func(*Command)) *Command {
+	c.mu.Lock()
 	c.onexit = append(c.onexit, f...)
+	c.mu.Unlock()
 	return c
 }
 
@@ -285,15 +293,18 @@ func New(cmdArgs []string, parts ...string) *Command {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
-	c := &Command{Cmd: *cmd, Ctx: ctx, cancel: cancel, mu: new(sync.Mutex)}
-	killChild := func(*Command) {
-		if c.Pid == 0 || ctx.Err() == nil {
+	c := &Command{Cmd: *cmd, Ctx: ctx, Cancel: cancel, mu: new(sync.RWMutex)}
+	killChild := func(c *Command) {
+		c.mu.RLock()
+		pid := c.Pid
+		c.mu.RUnlock()
+		if pid == 0 || ctx.Err() == nil {
 			return
 		}
 		// Kill by negative PID to kill the process group, which includes
 		// the top-level process we spawned as well as any subprocesses
 		// it spawned.
-		err := syscall.Kill(-c.Pid, syscall.SIGKILL)
+		err := syscall.Kill(-pid, syscall.SIGKILL)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "kill:", err)
 		}
@@ -303,14 +314,16 @@ func New(cmdArgs []string, parts ...string) *Command {
 }
 
 func (c *Command) cleanup() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
 	onexit := c.onexit
 	c.onexit = nil
+	c.mu.RUnlock()
 	for _, f := range onexit {
 		f(c)
 	}
-	c.cancel()
+	if c.Cancel != nil {
+		c.Cancel()
+	}
 }
 
 // resulting
@@ -337,10 +350,13 @@ func (c *Command) Run() error {
 	if err := c.Start(); err != nil {
 		return err
 	}
+	c.mu.Lock()
 	if c.Process != nil {
 		c.Pid = c.Process.Pid
 	}
-	for _, v := range c.onstart {
+	onstart := c.onstart
+	c.mu.Unlock()
+	for _, v := range onstart {
 		v(c)
 	}
 	return c.Wait()
