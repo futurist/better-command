@@ -3,6 +3,11 @@
 
 package command
 
+import (
+	"fmt"
+	"os/exec"
+)
+
 func (c *Command) initCmd(cmd *exec.Cmd) func(*Command) {
 	return nil
 }
