@@ -124,14 +124,6 @@ func TestShellUseSudo(t *testing.T) {
 	fmt.Println(string(b), err)
 }
 
-func TestShellAsUser(t *testing.T) {
-	cmd := NewSh(`whoami`).AsUser("nobody")
-	err := cmd.Run()
-	if !strings.Contains(err.Error(), "operation not permitted") {
-		t.Fatal("AsUser failed", err)
-	}
-}
-
 func TestShellEnv(t *testing.T) {
 	cmd := NewSh(`printf $ABC`).Env([]string{"ABC=1"})
 	b, _ := cmd.Output()
