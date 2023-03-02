@@ -2,6 +2,8 @@
 
 Go better command run shell commands safely and handily.
 
+More details please check [godoc](https://pkg.go.dev/github.com/futurist/better-command/command)
+
 ## Install
 
 ```sh
@@ -76,4 +78,6 @@ cmd.Context(ctx).Run()
 
 The command will be canceled in 100ms.
 
-More details please see godoc.
+More details please see [godoc](https://pkg.go.dev/github.com/futurist/better-command/command):
+
+[https://pkg.go.dev/github.com/futurist/better-command/command](https://pkg.go.dev/github.com/futurist/better-command/command)
