@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package command
 
 import (
@@ -60,35 +64,28 @@ func ReplaceShellString(s string, nonEscape bool) string {
 				r.WriteRune(v)
 				continue
 			}
-		}
-		if !shellNormal[v] {
-			r.WriteRune('\\')
+			if !shellNormal[v] {
+				r.WriteRune('\\')
+			}
 		}
 		r.WriteRune(v)
 	}
 	return r.String()
 }
 
+// Command is embeded [exec.Cmd] struct, with some more state to use.
 type Command struct {
 	exec.Cmd
-	Pid       int
+	// Pid is the pid of command after start
+	Pid int
+	// LastError is the last recorded error after chain
 	LastError error
-	Ctx       context.Context
-	cancel    context.CancelFunc
-	onexit    []func()
-	mu        *sync.Mutex
-}
-
-func (c *Command) Context(ctx context.Context) *Command {
-	go func() {
-		select {
-		case <-ctx.Done():
-		case <-c.Ctx.Done():
-		}
-		c.cancel()
-		c.cleanup()
-	}()
-	return c
+	// Ctx is the context of the command, can check Err() on OnExit to see if the context be canceled.
+	Ctx     context.Context
+	cancel  context.CancelFunc
+	onstart []func(*Command)
+	onexit  []func(*Command)
+	mu      *sync.Mutex
 }
 
 // sudo will return "sudo" command if non-root, or else ""
@@ -103,6 +100,7 @@ func sudo() []string {
 	return nil
 }
 
+// UseSudo to run command use `sudo` if not root, otherwise run normally
 func (c *Command) UseSudo() *Command {
 	s := sudo()
 	if s != nil {
@@ -111,12 +109,7 @@ func (c *Command) UseSudo() *Command {
 	return c
 }
 
-func (c *Command) Timeout(timeout time.Duration) *Command {
-	ctx, cancel := context.WithTimeout(c.Ctx, timeout)
-	c.onexit = append(c.onexit, cancel)
-	return c.Context(ctx)
-}
-
+// AsUser run command with osuser
 func (c *Command) AsUser(osuser string) *Command {
 	if runtime.GOOS == "windows" {
 		c.LastError = fmt.Errorf("AsUesr: not support windows yet")
@@ -151,45 +144,113 @@ func (c *Command) AsUser(osuser string) *Command {
 	return c
 }
 
+// Context can set command context that can cause the command be killed when canceled.
+//
+// The provided context is used to kill the process (by calling
+// os.Process.Kill) if the context becomes done before the command
+// completes on its own.
+func (c *Command) Context(ctx context.Context) *Command {
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-c.Ctx.Done():
+		}
+		c.cancel()
+		c.cleanup()
+	}()
+	return c
+}
+
+// Timeout run command with timeout, then kill the process.
+func (c *Command) Timeout(timeout time.Duration) *Command {
+	ctx, cancel := context.WithTimeout(c.Ctx, timeout)
+	c.onexit = append(c.onexit, func(c *Command) { cancel() })
+	return c.Context(ctx)
+}
+
+// Env set command env to run
 func (c *Command) Env(env []string) *Command {
 	c.Cmd.Env = env
 	return c
 }
 
+// Dir run command with PWD set to dir
 func (c *Command) Dir(dir string) *Command {
 	c.Cmd.Dir = dir
 	return c
 }
 
+// Stdin set command stdin to f
 func (c *Command) Stdin(f io.Reader) *Command {
 	c.Cmd.Stdin = f
 	return c
 }
 
+// Stdout set command stdout to f
 func (c *Command) Stdout(f io.Writer) *Command {
 	c.Cmd.Stdout = f
 	return c
 }
 
+// Stderr set command stderr to f
 func (c *Command) Stderr(f io.Writer) *Command {
 	c.Cmd.Stderr = f
 	return c
 }
 
+// Shell set command shell to shellName instead of 'sh', it must accept '-c' as second arg
 func (c *Command) Shell(shellName string) *Command {
 	c.Cmd.Args[0] = shellName
 	return c
 }
 
-func (c *Command) OnExit(f ...func()) *Command {
+// OnStart set functions to run when command just started
+func (c *Command) OnStart(f ...func(*Command)) *Command {
+	c.onstart = append(c.onstart, f...)
+	return c
+}
+
+// OnExit set functions to run when command just exit,
+// here can check the Ctx.Err() etc.
+func (c *Command) OnExit(f ...func(*Command)) *Command {
 	c.onexit = append(c.onexit, f...)
 	return c
 }
 
+// NewSh just like [New], but run []string{"sh", "-c", cmdString} by default
 func NewSh(cmdString string, parts ...string) *Command {
 	return New([]string{"sh", "-c", cmdString}, parts...)
 }
 
+// New return a Command instance to execute the named program with
+// the given arguments, cmdArgs will be safely escaped, to avoid Remote Code Execution (RCE) attack
+// or any form of Shell Injection, the escape will be denoted by below 2 forms:
+//
+//   - %s or "%s": will escape everything, except for shell variables like $ABC, or ${ABC}, any other variables form not accepted.
+//   - '%s': will escape everything, shell variables also be escaped.
+//
+// Command returns the Cmd struct to execute the named program with
+// the given arguments.
+//
+// It sets only the Path and Args in the returned structure.
+//
+// If name contains no path separators, Command uses LookPath to
+// resolve name to a complete path if possible. Otherwise it uses name
+// directly as Path.
+//
+// The returned Cmd's Args field is constructed from the command name
+// followed by the elements of arg, so arg should not include the
+// command name itself. For example, Command("echo", "hello").
+// Args[0] is always name, not the possibly resolved Path.
+//
+// On Windows, processes receive the whole command line as a single string
+// and do their own parsing. Command combines and quotes Args into a command
+// line string with an algorithm compatible with applications using
+// CommandLineToArgvW (which is the most common way). Notable exceptions are
+// msiexec.exe and cmd.exe (and thus, all batch files), which have a different
+// unquoting algorithm. In these or other similar cases, you can do the
+// quoting yourself and provide the full command line in SysProcAttr.CmdLine,
+// leaving Args empty.
 func New(cmdArgs []string, parts ...string) *Command {
 	for i2, v := range cmdArgs {
 		c := make([]string, 0)
@@ -208,7 +269,7 @@ func New(cmdArgs []string, parts ...string) *Command {
 				c = append(c, s)
 			}
 		}
-		cmdArgs[i2] = strings.Join(c, " ")
+		cmdArgs[i2] = strings.Join(c, "")
 	}
 
 	// in go1.20 we should use context.WithCancelCause
@@ -225,7 +286,7 @@ func New(cmdArgs []string, parts ...string) *Command {
 		Setpgid: true,
 	}
 	c := &Command{Cmd: *cmd, Ctx: ctx, cancel: cancel, mu: new(sync.Mutex)}
-	killChild := func() {
+	killChild := func(*Command) {
 		if c.Pid == 0 || ctx.Err() == nil {
 			return
 		}
@@ -237,7 +298,7 @@ func New(cmdArgs []string, parts ...string) *Command {
 			fmt.Fprintln(os.Stderr, "kill:", err)
 		}
 	}
-	c.onexit = []func(){killChild}
+	c.onexit = []func(*Command){killChild}
 	return c
 }
 
@@ -247,13 +308,26 @@ func (c *Command) cleanup() {
 	onexit := c.onexit
 	c.onexit = nil
 	for _, f := range onexit {
-		f()
+		f(c)
 	}
 	c.cancel()
 }
 
 // resulting
 
+// Run starts the specified command and waits for it to complete.
+//
+// The returned error is nil if the command runs, has no problems
+// copying stdin, stdout, and stderr, and exits with a zero exit
+// status.
+//
+// If the command starts but does not complete successfully, the error is of
+// type *ExitError. Other error types may be returned for other situations.
+//
+// If the calling goroutine has locked the operating system thread
+// with runtime.LockOSThread and modified any inheritable OS-level
+// thread state (for example, Linux or Plan 9 name spaces), the new
+// process will inherit the caller's thread state.
 func (c *Command) Run() error {
 	defer c.cleanup()
 	if c.LastError != nil {
@@ -266,9 +340,15 @@ func (c *Command) Run() error {
 	if c.Process != nil {
 		c.Pid = c.Process.Pid
 	}
+	for _, v := range c.onstart {
+		v(c)
+	}
 	return c.Wait()
 }
 
+// Output runs the command and returns its standard output.
+// Any returned error will usually be of type *ExitError.
+// If c.Stderr was nil, Output populates ExitError.Stderr.
 func (c *Command) Output() ([]byte, error) {
 	defer c.cleanup()
 	if c.LastError != nil {
@@ -295,6 +375,8 @@ func (c *Command) Output() ([]byte, error) {
 	return stdout.Bytes(), err
 }
 
+// CombinedOutput runs the command and returns its combined standard
+// output and standard error.
 func (c *Command) CombinedOutput() ([]byte, error) {
 	defer c.cleanup()
 	if c.LastError != nil {

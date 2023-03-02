@@ -22,9 +22,9 @@ func TestReplaceShellString(t *testing.T) {
 		nonEscape bool
 		want      string
 	}{
-		"non-escape-1": {`abc${HOME}bb`, true, `abc\$\{HOME\}bb`},
-		"non-escape-2": {`abc$HOME--`, true, `abc\$HOME--`},
-		"non-escape-3": {`abc${HOME:-$(ls)}bb`, true, `abc\$\{HOME:-\$\(ls\)\}bb`},
+		"non-escape-1": {`abc${HOME}bb`, true, `abc${HOME}bb`},
+		"non-escape-2": {`abc$HOME--`, true, `abc$HOME--`},
+		"non-escape-3": {`abc${HOME:-$(ls)}bb`, true, `abc${HOME:-$(ls)}bb`},
 
 		"escape-1": {`abc${HOME}bb`, false, `abc${HOME}bb`},
 		"escape-2": {`abc$HOME--`, false, `abc$HOME--`},
@@ -46,7 +46,7 @@ func TestNewShell(t *testing.T) {
 		"$HOME/$abc--", "${HOME}/$abc--", "${HOME}/$abc--", "abc;rm -rf /",
 	)
 	if diff := cmp.Diff(cmd.Args, []string{
-		"sh", "-c", `echo --$HOME/$abc---- --${HOME}/$abc---- --\$\{HOME\}/\$abc---- abc\;rm\ -rf\ /`,
+		"sh", "-c", `echo --$HOME/$abc---- --${HOME}/$abc---- '--${HOME}/$abc----' abc\;rm\ -rf\ /`,
 	}); diff != "" {
 		t.Fatal(diff)
 	}
@@ -210,7 +210,7 @@ func TestShellCleanup(t *testing.T) {
 	name := "testrun-" + strconv.Itoa(rand.Int())
 	file := path.Join("/tmp", name)
 	cmd := NewSh(`touch /tmp/%s`, name)
-	err := cmd.OnExit(func() {
+	err := cmd.OnExit(func(*Command) {
 		if cmd.Ctx.Err() != nil {
 			t.Fatal("context should be nil")
 		}

@@ -384,6 +384,8 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 				case nonEscapingQuoteRuneClass:
 					{
 						if startRuneType == nonEscapingQuoteRuneClass {
+							value = append([]rune{'\''}, value...)
+							value = append(value, '\'')
 							token := &Token{
 								tokenClass: startRuneType,
 								tokenType:  tokenType,

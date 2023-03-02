@@ -26,6 +26,8 @@ The argument for `'%s'` will be always safely escaped.
 
 The argument for `%s` and `"%s"` will be always safely escaped except `$VAR` and `${VAR}`, thus you can use shell variables in side arguments.
 
+The `New` and `NewSh` method argments just like `fmt.Printf`, the first arg is formatString, rest is format arguments, but with one exception: they can only accept `%s` as format placeholder. If you want use like `%v`, you can manually invoke `.toString()` method of the argument to pass as string.
+
 ### Chained style with handily functions
 
 ```go
@@ -37,6 +39,26 @@ command.NewSh(`echo %s '%s'`, "logs: $HOME/$abc/logs", "logs: $HOME/$abc/logs")
     .Timeout(time.Second*10)
     .CombinedOutput()
 ```
+
+There methods can be chained(in the middle):
+
+- `UseSudo`
+- `AsUser`
+- `Timeout`
+- `Context`
+- `Env`
+- `Dir`
+- `Stdin`
+- `Stdout`
+- `Stderr`
+- `Shell`
+- `OnExit`
+
+But below methods cannot be chained(finalize):
+
+- `Run`
+- `Output`
+- `CombinedOutput`
 
 ### Default with context
 
@@ -53,3 +75,5 @@ cmd.Context(ctx).Run()
 ```
 
 The command will be canceled in 100ms.
+
+More details please see godoc.
