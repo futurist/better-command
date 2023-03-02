@@ -8,14 +8,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"os/user"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/futurist/better-command/shlex"
@@ -251,28 +248,12 @@ func New(cmdArgs []string, parts ...string) *Command {
 		return nil
 	}
 
-	// Force-enable setpgid bit so that we can kill child processes when the
-	// context is canceled.
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
 	c := &Command{Cmd: *cmd, Ctx: ctx, Cancel: cancel, mu: new(sync.RWMutex)}
-	killChild := func(c *Command) {
-		c.mu.RLock()
-		pid := c.Pid
-		c.mu.RUnlock()
-		if pid == 0 || ctx.Err() == nil {
-			return
-		}
-		// Kill by negative PID to kill the process group, which includes
-		// the top-level process we spawned as well as any subprocesses
-		// it spawned.
-		err := syscall.Kill(-pid, syscall.SIGKILL)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "kill:", err)
-		}
+	c.onexit = make([]func(*Command), 0)
+	fn := c.initCmd(cmd)
+	if fn != nil {
+		c.onexit = append(c.onexit, fn)
 	}
-	c.onexit = []func(*Command){killChild}
 	return c
 }
 

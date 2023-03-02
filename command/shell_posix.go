@@ -5,12 +5,38 @@ package command
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"os/user"
 	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 )
+
+func (c *Command) initCmd(cmd *exec.Cmd) func(*Command) {
+	// Force-enable setpgid bit so that we can kill child processes when the
+	// context is canceled.
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+	killChild := func(c *Command) {
+		c.mu.RLock()
+		pid := c.Pid
+		c.mu.RUnlock()
+		if pid == 0 || c.Ctx.Err() == nil {
+			return
+		}
+		// Kill by negative PID to kill the process group, which includes
+		// the top-level process we spawned as well as any subprocesses
+		// it spawned.
+		err := syscall.Kill(-pid, syscall.SIGKILL)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "kill:", err)
+		}
+	}
+	return killChild
+}
 
 // AsUser run command with osuser
 func (c *Command) AsUser(osuser string) *Command {
