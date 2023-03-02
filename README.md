@@ -1,6 +1,6 @@
-# go-shell
+# better-command
 
-Go shell run shell commands safely and handily.
+Go better command run shell commands safely and handily.
 
 ## Install
 
@@ -14,8 +14,10 @@ go get github.com/futurist/better-command
 
 ```go
 // below is true:
+import "github.com/futurist/better-command/command"
+
 reflect.DeepEqual(
-    shell.NewSh(`echo %s '%s'`, "logs: $HOME/$abc/logs", "logs: $HOME/$abc/logs").Args,
+    command.NewSh(`echo %s '%s'`, "logs: $HOME/$abc/logs", "logs: $HOME/$abc/logs").Args,
     []string{"sh", "-c", `echo logs\:\ $HOME/$abc/logs logs\:\ \$HOME/\$abc/logs `}
 )
 ```
@@ -27,7 +29,9 @@ The argument for `%s` and `"%s"` will be always safely escaped except `$VAR` and
 ### Chained style with handily functions
 
 ```go
-shell.NewSh(`echo %s '%s'`, "logs: $HOME/$abc/logs", "logs: $HOME/$abc/logs")
+import "github.com/futurist/better-command/command"
+
+command.NewSh(`echo %s '%s'`, "logs: $HOME/$abc/logs", "logs: $HOME/$abc/logs")
     .Stdout(os.Stdout)
     .Stdin(os.Stdin)
     .Timeout(time.Second*10)
@@ -37,5 +41,15 @@ shell.NewSh(`echo %s '%s'`, "logs: $HOME/$abc/logs", "logs: $HOME/$abc/logs")
 ### Default with context
 
 ```go
-shell.New(``)
+import "github.com/futurist/better-command/command"
+
+cmd := command.New([]string{"bash", "-c", "sleep 10; echo ok"})
+ctx, cancel := context.WithCancel(context.Background())
+go func() {
+    time.Sleep(time.Millisecond * 100)
+    cancel()
+}()
+cmd.Context(ctx).Run()
 ```
+
+The command will be canceled in 100ms.

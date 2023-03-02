@@ -1,7 +1,9 @@
 package command
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -116,6 +118,83 @@ func TestShellCombinedOutput(t *testing.T) {
 	}
 }
 
+func TestShellUseSudo(t *testing.T) {
+	cmd := NewSh(`whoami`).UseSudo()
+	b, err := cmd.Output()
+	fmt.Println(string(b), err)
+}
+
+func TestShellAsUser(t *testing.T) {
+	cmd := NewSh(`whoami`).AsUser("nobody")
+	err := cmd.Run()
+	if !strings.Contains(err.Error(), "operation not permitted") {
+		t.Fatal("AsUser failed", err)
+	}
+}
+
+func TestShellEnv(t *testing.T) {
+	cmd := NewSh(`printf $ABC`).Env([]string{"ABC=1"})
+	b, _ := cmd.Output()
+	if string(b) != "1" {
+		t.Fatal("env should be 1", string(b))
+	}
+}
+
+func TestShellDir(t *testing.T) {
+	cmd := NewSh(`pwd`).Dir("/tmp")
+	b, _ := cmd.Output()
+	if string(b) != "/tmp\n" {
+		t.Fatal("dir should be /tmp", string(b))
+	}
+}
+
+func TestShellStdin(t *testing.T) {
+	buf := new(bytes.Buffer)
+	buf.WriteString("abc")
+	cmd := NewSh(`read a; printf $a`).Stdin(buf)
+	b, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != "abc" {
+		t.Fatal("stdin should be abc")
+	}
+}
+
+func TestShellStdout(t *testing.T) {
+	buf := new(bytes.Buffer)
+	cmd := NewSh(`printf abc`).Stdout(buf)
+	_, err := cmd.Output()
+	if err == nil {
+		t.Fatal("should show error")
+	}
+	cmd = NewSh(`printf abc`).Stdout(buf)
+	err = cmd.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if buf.String() != "abc" {
+		t.Fatal("output should be abc")
+	}
+}
+
+func TestShellStderr(t *testing.T) {
+	buf := new(bytes.Buffer)
+	cmd := NewSh(`printf abc`).Stderr(buf)
+	_, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatal("should show error")
+	}
+	cmd = NewSh(`printf abc 1>&2`).Stderr(buf)
+	err = cmd.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if buf.String() != "abc" {
+		t.Fatal("outerr should be abc", buf.String())
+	}
+}
+
 func TestShellBash(t *testing.T) {
 	cmd := NewSh(`printf $0`)
 	b, err := cmd.Shell("bash").Output()
@@ -173,10 +252,8 @@ func TestShellContext(t *testing.T) {
 
 func TestShellTimeout(t *testing.T) {
 	cmd := NewSh(`sleep 1; printf ok`)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
-	defer cancel()
 	start := time.Now()
-	b, err := cmd.Context(ctx).Output()
+	b, err := cmd.Timeout(time.Millisecond * 100).Output()
 	if time.Since(start) > time.Millisecond*200 {
 		t.Fatal("should be killed")
 	}
