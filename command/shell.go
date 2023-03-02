@@ -314,10 +314,10 @@ func New(cmdArgs []string, parts ...string) *Command {
 }
 
 func (c *Command) cleanup() {
-	c.mu.RLock()
+	c.mu.Lock()
 	onexit := c.onexit
 	c.onexit = nil
-	c.mu.RUnlock()
+	c.mu.Unlock()
 	for _, f := range onexit {
 		f(c)
 	}
