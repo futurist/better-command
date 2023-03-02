@@ -141,10 +141,14 @@ func TestShellEnv(t *testing.T) {
 }
 
 func TestShellDir(t *testing.T) {
-	cmd := NewSh(`pwd`).Dir("/tmp")
+	tmp, _ := os.Getwd()
+	cmd := NewSh(`pwd`).Dir(tmp)
 	b, _ := cmd.Output()
-	if string(b) != "/tmp\n" {
-		t.Fatal("dir should be /tmp", string(b))
+
+	out := path.Clean(strings.TrimSpace(string(b)))
+	want := path.Clean(strings.TrimSpace(tmp))
+	if out != want {
+		t.Fatal("dir should be "+tmp, string(b))
 	}
 }
 
