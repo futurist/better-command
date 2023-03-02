@@ -71,7 +71,7 @@ func ReplaceShellString(s string, nonEscape bool) string {
 
 // Command is embeded [exec.Cmd] struct, with some more state to use.
 type Command struct {
-	exec.Cmd
+	*exec.Cmd
 	// Pid is the pid of command after start
 	Pid int
 	// LastError is the last recorded error after chain
@@ -249,7 +249,7 @@ func New(cmdArgs []string, parts ...string) *Command {
 		return nil
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{}
-	c := &Command{Cmd: *cmd, Ctx: ctx, Cancel: cancel, mu: new(sync.RWMutex)}
+	c := &Command{Cmd: cmd, Ctx: ctx, Cancel: cancel, mu: new(sync.RWMutex)}
 	c.onexit = make([]func(*Command), 0)
 	fn := c.initCmd(cmd)
 	if fn != nil {
