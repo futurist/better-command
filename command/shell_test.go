@@ -40,6 +40,13 @@ func TestReplaceShellString(t *testing.T) {
 	}
 }
 
+func TestNewBash(t *testing.T) {
+	cmd := NewBash("echo")
+	if cmd.Args[0] != "bash" {
+		t.Fatal("NewBash should have bash on args[0]")
+	}
+}
+
 func TestNewShell(t *testing.T) {
 	cmd := New(
 		[]string{"sh", "-c", `echo --%s-- "--%s--" '--%s--' %s`},

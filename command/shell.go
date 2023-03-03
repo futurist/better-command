@@ -186,6 +186,11 @@ func (c *Command) OnExit(f ...func(*Command)) *Command {
 	return c
 }
 
+// NewBash just like [New], but run []string{"bash", "-c", cmdString} by default
+func NewBash(cmdString string, parts ...string) *Command {
+	return New([]string{"bash", "-c", cmdString}, parts...)
+}
+
 // NewSh just like [New], but run []string{"sh", "-c", cmdString} by default
 func NewSh(cmdString string, parts ...string) *Command {
 	return New([]string{"sh", "-c", cmdString}, parts...)
