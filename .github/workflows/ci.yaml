@@ -1,7 +1,22 @@
 on: [push, pull_request]
 name: Test
 jobs:
-  test:
+  windows-test:
+    strategy:
+      matrix:
+        go-version: [1.17.x, 1.19.x, 1.20.x]
+        os: [windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+      - uses: actions/checkout@v3
+
+      - name: Run tests
+        run: go test -vet=off ./...
+
+  posix-test:
     strategy:
       matrix:
         go-version: [1.17.x, 1.19.x, 1.20.x]
@@ -22,7 +37,7 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-      - name: Install staticcheck
+      - name: staticcheck
         run: |
           if [[ ${{ matrix.go-version }} =~ ^1.19 ]]; then
             go install honnef.co/go/tools/cmd/staticcheck@latest
@@ -56,4 +71,4 @@ jobs:
           key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ matrix.go-version }}-
-      - run: go test ./...
+      - run: go test -vet=off ./...
