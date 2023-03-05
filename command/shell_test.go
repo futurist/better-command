@@ -22,12 +22,12 @@ func TestReplaceShellString(t *testing.T) {
 		input string
 		want  string
 	}{
-		"space":     {`echo `, `echo `},
-		"comment":   {`echo #test`, `echo #test`},
-		"comment-1": {`echo '##'# test #`, `echo '##'# test #`},
+		"space":     {`echo `, `echo\ `},
+		"comment":   {`echo #test`, `echo\ #test`},
+		"comment-1": {`echo '##'# test #`, `echo\ '##'# test #`},
 		"comment-2": {`echo 
 		#test`,
-			`echo 
+			`echo\ 
 		#test`},
 
 		"non-escape-1": {`'abc${HOME}bb'`, `'abc${HOME}bb'`},
@@ -69,9 +69,9 @@ func TestNewShell(t *testing.T) {
 		"$HOME/$abc--", "${HOME}/$abc--", "${HOME}/$abc--", "abc;rm -rf /",
 	)
 	if diff := cmp.Diff(cmd.Args, []string{
-		"sh", "-c", `echo --$HOME/$abc---- --${HOME}/$abc---- '--${HOME}/$abc----' abc\;rm\ -rf\ /`,
+		"sh", "-c", `echo --$HOME/$abc---- --${HOME}\/$abc\-\--- '--${HOME}/$abc----' abc\;rm\ -rf\ /`,
 	}); diff != "" {
-		t.Fatal(diff)
+		t.Fatal(diff, cmd.Args)
 	}
 }
 

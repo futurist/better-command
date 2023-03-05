@@ -24,7 +24,7 @@ const shellVars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwx
 var shellNormal = make(map[rune]bool, 0)
 
 func init() {
-	for _, v := range "#%+-.~/:= \t\r\n" + shellVars {
+	for _, v := range "#%+-.~/:=" + shellVars {
 		shellNormal[v] = true
 	}
 }
@@ -41,10 +41,11 @@ func ReplaceShellString(s string, token *shlex.Token) string {
 			next2 = s[i+2 : i+3]
 		}
 		if token.TokenClass == shlex.EscapingQuoteRuneClass || token.TokenClass == shlex.UnknownRuneClass {
-			if inVar == 1 && !strings.Contains(shellVars, string(v)) {
+			isVarChar := strings.Contains(shellVars, string(v))
+			if inVar == 1 && !isVarChar {
 				inVar = 0
 			}
-			if inVar == 2 && v != '{' && !strings.Contains(shellVars, string(v)) {
+			if inVar == 2 && v != '{' && !isVarChar {
 				inVar = 0
 				r.WriteRune(v)
 				continue
@@ -61,7 +62,9 @@ func ReplaceShellString(s string, token *shlex.Token) string {
 				continue
 			}
 			if !shellNormal[v] || (token.TokenClass > 0 && inVar == 0) {
-				r.WriteRune('\\')
+				if !isVarChar {
+					r.WriteRune('\\')
+				}
 			}
 		}
 		r.WriteRune(v)
