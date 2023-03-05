@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-
 func TestShellAsUser(t *testing.T) {
 	cmd := NewSh(`whoami`).AsUser("nobody")
 	err := cmd.Run()

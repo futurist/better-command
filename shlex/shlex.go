@@ -56,9 +56,9 @@ type lexerState int
 
 // Token is a (type, value) pair representing a lexographical token.
 type Token struct {
-	tokenClass runeTokenClass
-	tokenType  TokenType
-	value      string
+	TokenClass runeTokenClass
+	TokenType  TokenType
+	Value      string
 }
 
 // Equal reports whether tokens a, and b, are equal.
@@ -68,38 +68,38 @@ func (a *Token) Equal(b *Token) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	if a.tokenType != b.tokenType {
+	if a.TokenType != b.TokenType {
 		return false
 	}
-	return a.value == b.value
+	return a.Value == b.Value
 }
 
 func (a *Token) String() string {
-	return a.value
+	return a.Value
 }
 
 func (a *Token) IsNonEscape() bool {
-	return a.tokenClass == nonEscapingQuoteRuneClass
+	return a.TokenClass == NonEscapingQuoteRuneClass
 }
 
 // Named classes of UTF-8 runes
 const (
-	spaceRunes            = " \t\r\n"
-	escapingQuoteRunes    = `"`
-	nonEscapingQuoteRunes = "'"
-	escapeRunes           = `\`
-	commentRunes          = "#"
+	SpaceRunes            = " \t\r\n"
+	EscapingQuoteRunes    = `"`
+	NonEscapingQuoteRunes = "'"
+	EscapeRunes           = `\`
+	CommentRunes          = "#"
 )
 
 // Classes of rune token
 const (
-	unknownRuneClass runeTokenClass = iota
-	spaceRuneClass
-	escapingQuoteRuneClass
-	nonEscapingQuoteRuneClass
-	escapeRuneClass
-	commentRuneClass
-	eofRuneClass
+	UnknownRuneClass runeTokenClass = iota
+	SpaceRuneClass
+	EscapingQuoteRuneClass
+	NonEscapingQuoteRuneClass
+	EscapeRuneClass
+	CommentRuneClass
+	EofRuneClass
 )
 
 // Classes of lexographic token
@@ -133,11 +133,11 @@ func (typeMap tokenClassifier) addRuneClass(runes string, tokenType runeTokenCla
 // newDefaultClassifier creates a new classifier for ASCII characters.
 func newDefaultClassifier() tokenClassifier {
 	t := tokenClassifier{}
-	t.addRuneClass(spaceRunes, spaceRuneClass)
-	t.addRuneClass(escapingQuoteRunes, escapingQuoteRuneClass)
-	t.addRuneClass(nonEscapingQuoteRunes, nonEscapingQuoteRuneClass)
-	t.addRuneClass(escapeRunes, escapeRuneClass)
-	t.addRuneClass(commentRunes, commentRuneClass)
+	t.addRuneClass(SpaceRunes, SpaceRuneClass)
+	t.addRuneClass(EscapingQuoteRunes, EscapingQuoteRuneClass)
+	t.addRuneClass(NonEscapingQuoteRunes, NonEscapingQuoteRuneClass)
+	t.addRuneClass(EscapeRunes, EscapeRuneClass)
+	t.addRuneClass(CommentRunes, CommentRuneClass)
 	return t
 }
 
@@ -162,13 +162,13 @@ func (l *Lexer) Next() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		switch token.tokenType {
+		switch token.TokenType {
 		case WordToken:
-			return token.value, nil
+			return token.Value, nil
 		case CommentToken:
 			// skip comments
 		default:
-			return "", fmt.Errorf("unknown token type: %v", token.tokenType)
+			return "", fmt.Errorf("unknown token type: %v", token.TokenType)
 		}
 	}
 }
@@ -206,7 +206,7 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 		nextRuneType = t.classifier.ClassifyRune(nextRune)
 
 		if err == io.EOF {
-			nextRuneType = eofRuneClass
+			nextRuneType = EofRuneClass
 			err = nil
 		} else if err != nil {
 			return nil, err
@@ -217,31 +217,31 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 			{
 				startRuneType = nextRuneType
 				switch nextRuneType {
-				case eofRuneClass:
+				case EofRuneClass:
 					{
 						return nil, io.EOF
 					}
-				case spaceRuneClass:
+				case SpaceRuneClass:
 					{
 						// prepend startSpace when return the Token
 						startSpace = append(startSpace, nextRune)
 					}
-				case escapingQuoteRuneClass:
+				case EscapingQuoteRuneClass:
 					{
 						tokenType = WordToken
 						state = quotingEscapingState
 					}
-				case nonEscapingQuoteRuneClass:
+				case NonEscapingQuoteRuneClass:
 					{
 						tokenType = WordToken
 						state = quotingState
 					}
-				case escapeRuneClass:
+				case EscapeRuneClass:
 					{
 						tokenType = WordToken
 						state = escapingState
 					}
-				case commentRuneClass:
+				case CommentRuneClass:
 					{
 						tokenType = CommentToken
 						state = commentState
@@ -257,33 +257,33 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 		case inWordState: // in a regular word
 			{
 				switch nextRuneType {
-				case eofRuneClass:
+				case EofRuneClass:
 					{
 						token := &Token{
-							tokenClass: startRuneType,
-							tokenType:  tokenType,
-							value:      string(append(startSpace, value...)),
+							TokenClass: startRuneType,
+							TokenType:  tokenType,
+							Value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
-				case spaceRuneClass:
+				case SpaceRuneClass:
 					{
 						token := &Token{
-							tokenClass: startRuneType,
-							tokenType:  tokenType,
-							value:      string(append(append(startSpace, value...), nextRune)),
+							TokenClass: startRuneType,
+							TokenType:  tokenType,
+							Value:      string(append(append(startSpace, value...), nextRune)),
 						}
 						return token, err
 					}
-				case escapingQuoteRuneClass:
+				case EscapingQuoteRuneClass:
 					{
 						state = quotingEscapingState
 					}
-				case nonEscapingQuoteRuneClass:
+				case NonEscapingQuoteRuneClass:
 					{
 						state = quotingState
 					}
-				case escapeRuneClass:
+				case EscapeRuneClass:
 					{
 						state = escapingState
 					}
@@ -296,13 +296,13 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 		case escapingState: // the rune after an escape character
 			{
 				switch nextRuneType {
-				case eofRuneClass:
+				case EofRuneClass:
 					{
 						err = fmt.Errorf("EOF found after escape character")
 						token := &Token{
-							tokenClass: startRuneType,
-							tokenType:  tokenType,
-							value:      string(append(startSpace, value...)),
+							TokenClass: startRuneType,
+							TokenType:  tokenType,
+							Value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
@@ -316,13 +316,13 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 		case escapingQuotedState: // the next rune after an escape character, in double quotes
 			{
 				switch nextRuneType {
-				case eofRuneClass:
+				case EofRuneClass:
 					{
 						err = fmt.Errorf("EOF found after escape character")
 						token := &Token{
-							tokenClass: startRuneType,
-							tokenType:  tokenType,
-							value:      string(append(startSpace, value...)),
+							TokenClass: startRuneType,
+							TokenType:  tokenType,
+							Value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
@@ -336,29 +336,29 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 		case quotingEscapingState: // in escaping double quotes
 			{
 				switch nextRuneType {
-				case eofRuneClass:
+				case EofRuneClass:
 					{
 						err = fmt.Errorf("EOF found when expecting closing quote")
 						token := &Token{
-							tokenClass: startRuneType,
-							tokenType:  tokenType,
-							value:      string(append(startSpace, value...)),
+							TokenClass: startRuneType,
+							TokenType:  tokenType,
+							Value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
-				case escapingQuoteRuneClass:
+				case EscapingQuoteRuneClass:
 					{
-						if startRuneType == escapingQuoteRuneClass {
+						if startRuneType == EscapingQuoteRuneClass {
 							token := &Token{
-								tokenClass: startRuneType,
-								tokenType:  tokenType,
-								value:      string(append(startSpace, value...)),
+								TokenClass: startRuneType,
+								TokenType:  tokenType,
+								Value:      string(append(startSpace, value...)),
 							}
 							return token, err
 						}
 						state = inWordState
 					}
-				case escapeRuneClass:
+				case EscapeRuneClass:
 					{
 						state = escapingQuotedState
 					}
@@ -371,25 +371,25 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 		case quotingState: // in non-escaping single quotes
 			{
 				switch nextRuneType {
-				case eofRuneClass:
+				case EofRuneClass:
 					{
 						err = fmt.Errorf("EOF found when expecting closing quote")
 						token := &Token{
-							tokenClass: startRuneType,
-							tokenType:  tokenType,
-							value:      string(append(startSpace, value...)),
+							TokenClass: startRuneType,
+							TokenType:  tokenType,
+							Value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
-				case nonEscapingQuoteRuneClass:
+				case NonEscapingQuoteRuneClass:
 					{
-						if startRuneType == nonEscapingQuoteRuneClass {
+						if startRuneType == NonEscapingQuoteRuneClass {
 							value = append([]rune{'\''}, value...)
 							value = append(value, '\'')
 							token := &Token{
-								tokenClass: startRuneType,
-								tokenType:  tokenType,
-								value:      string(append(startSpace, value...)),
+								TokenClass: startRuneType,
+								TokenType:  tokenType,
+								Value:      string(append(startSpace, value...)),
 							}
 							return token, err
 						}
@@ -404,23 +404,24 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 		case commentState: // in a comment
 			{
 				switch nextRuneType {
-				case eofRuneClass:
+				case EofRuneClass:
 					{
+						value = append([]rune{'#'}, value...)
 						token := &Token{
-							tokenClass: startRuneType,
-							tokenType:  tokenType,
-							value:      string(append(startSpace, value...)),
+							TokenClass: startRuneType,
+							TokenType:  tokenType,
+							Value:      string(append(startSpace, value...)),
 						}
 						return token, err
 					}
-				case spaceRuneClass:
+				case SpaceRuneClass:
 					{
 						if nextRune == '\n' {
 							state = startState
 							token := &Token{
-								tokenClass: startRuneType,
-								tokenType:  tokenType,
-								value:      string(append(append(startSpace, value...), nextRune)),
+								TokenClass: startRuneType,
+								TokenType:  tokenType,
+								Value:      string(append(append(startSpace, value...), nextRune)),
 							}
 							return token, err
 						} else {

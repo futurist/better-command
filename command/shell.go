@@ -24,12 +24,12 @@ const shellVars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwx
 var shellNormal = make(map[rune]bool, 0)
 
 func init() {
-	for _, v := range "#%+-.~/:=" + shellVars {
+	for _, v := range "#%+-.~/:= \t\r\n" + shellVars {
 		shellNormal[v] = true
 	}
 }
 
-func ReplaceShellString(s string, nonEscape bool) string {
+func ReplaceShellString(s string, token *shlex.Token) string {
 	r := new(strings.Builder)
 	inVar := 0
 	for i, v := range s {
@@ -40,7 +40,7 @@ func ReplaceShellString(s string, nonEscape bool) string {
 		if i+2 < len(s) {
 			next2 = s[i+2 : i+3]
 		}
-		if !nonEscape {
+		if token.TokenClass == shlex.EscapingQuoteRuneClass || token.TokenClass == shlex.UnknownRuneClass {
 			if inVar == 1 && !strings.Contains(shellVars, string(v)) {
 				inVar = 0
 			}
@@ -60,7 +60,7 @@ func ReplaceShellString(s string, nonEscape bool) string {
 				r.WriteRune(v)
 				continue
 			}
-			if !shellNormal[v] {
+			if !shellNormal[v] || (token.TokenClass > 0 && inVar == 0) {
 				r.WriteRune('\\')
 			}
 		}
@@ -236,7 +236,7 @@ func New(cmdArgs []string, parts ...string) *Command {
 			} else {
 				s := token.String()
 				for strings.Contains(s, "%s") {
-					sanitized := ReplaceShellString(parts[i], token.IsNonEscape())
+					sanitized := ReplaceShellString(parts[i], token)
 					s = strings.Replace(s, "%s", sanitized, 1)
 					i++
 				}

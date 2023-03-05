@@ -13,27 +13,43 @@ import (
 	"testing"
 	"time"
 
+	"github.com/futurist/better-command/shlex"
 	"github.com/google/go-cmp/cmp"
 )
 
 func TestReplaceShellString(t *testing.T) {
 	tests := map[string]struct {
-		input     string
-		nonEscape bool
-		want      string
+		input string
+		want  string
 	}{
-		"non-escape-1": {`abc${HOME}bb`, true, `abc${HOME}bb`},
-		"non-escape-2": {`abc$HOME--`, true, `abc$HOME--`},
-		"non-escape-3": {`abc${HOME:-$(ls)}bb`, true, `abc${HOME:-$(ls)}bb`},
+		"space":     {`echo `, `echo `},
+		"comment":   {`echo #test`, `echo #test`},
+		"comment-1": {`echo '##'# test #`, `echo '##'# test #`},
+		"comment-2": {`echo 
+		#test`,
+			`echo 
+		#test`},
 
-		"escape-1": {`abc${HOME}bb`, false, `abc${HOME}bb`},
-		"escape-2": {`abc$HOME--`, false, `abc$HOME--`},
-		"escape-3": {`abc${HOME:-$(ls)}bb`, false, `abc${HOME:-\$\(ls\)\}bb`},
+		"non-escape-1": {`'abc${HOME}bb'`, `'abc${HOME}bb'`},
+		"non-escape-2": {`'abc$HOME--'`, `'abc$HOME--'`},
+		"non-escape-3": {`'abc${HOME:-$(ls)}bb'`, `'abc${HOME:-$(ls)}bb'`},
+
+		"escape-1": {`abc${HOME}bb`, `abc${HOME}bb`},
+		"escape-2": {`abc$HOME--`, `abc$HOME--`},
+		"escape-3": {`abc${HOME:-$(ls)}bb`, `abc${HOME:-\$\(ls\)\}bb`},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := ReplaceShellString(tc.input, tc.nonEscape)
-			if diff := cmp.Diff(got, tc.want); diff != "" {
+			l := shlex.NewTokenizer(strings.NewReader(tc.input))
+			s := make([]string, 0)
+			for {
+				if token, err := l.Next(); err != nil {
+					break
+				} else {
+					s = append(s, ReplaceShellString(token.String(), token))
+				}
+			}
+			if diff := cmp.Diff(strings.Join(s, ""), tc.want); diff != "" {
 				t.Fatal(diff)
 			}
 		})
