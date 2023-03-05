@@ -36,7 +36,7 @@ func TestReplaceShellString(t *testing.T) {
 
 		"escape-1": {`abc${HOME}bb`, `abc${HOME}bb`},
 		"escape-2": {`abc$HOME--`, `abc$HOME--`},
-		"escape-3": {`abc${HOME:-$(ls)}bb`, `abc${HOME:-\$\(ls\)\}bb`},
+		"escape-3": {`abc${HOME:-$(ls)}bb`, `abc\${HOME:-\$\(ls\)\}bb`},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestReplaceShellString(t *testing.T) {
 				}
 			}
 			if diff := cmp.Diff(strings.Join(s, ""), tc.want); diff != "" {
-				t.Fatal(diff)
+				t.Fatal(diff, strings.Join(s, ""))
 			}
 		})
 	}

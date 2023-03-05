@@ -30,8 +30,9 @@ func init() {
 }
 
 func ReplaceShellString(s string, token *shlex.Token) string {
-	r := new(strings.Builder)
+	r := make([]rune, 0)
 	inVar := 0
+	varPos := 0
 	for i, v := range s {
 		next, next2 := "", ""
 		if i+1 < len(s) {
@@ -47,29 +48,36 @@ func ReplaceShellString(s string, token *shlex.Token) string {
 			}
 			if inVar == 2 && v != '{' && !isVarChar {
 				inVar = 0
-				r.WriteRune(v)
+				// for ${HOME:-}, we need \${HOME:-\}
+				if varPos > 0 && v != '}' {
+					r = append(r[0:varPos-1], append([]rune{'\\'}, r[varPos-1:]...)...)
+				}
+				varPos = 0
+				r = append(r, v)
 				continue
 			}
 			if v == '$' && strings.Contains(shellVars, next) {
+				varPos = len(r) + 1
 				inVar = 1
 			}
 			if v == '$' && next == "{" && strings.Contains(shellVars, next2) {
+				varPos = len(r) + 1
 				inVar = 2
 			}
 			// $VAR || ${VAR}
 			if inVar > 0 {
-				r.WriteRune(v)
+				r = append(r, v)
 				continue
 			}
 			if !shellNormal[v] || (token.TokenClass > 0 && inVar == 0) {
 				if !isVarChar {
-					r.WriteRune('\\')
+					r = append(r, '\\')
 				}
 			}
 		}
-		r.WriteRune(v)
+		r = append(r, v)
 	}
-	return r.String()
+	return string(r)
 }
 
 // Command is embeded [exec.Cmd] struct, with some more state to use.
