@@ -48,7 +48,7 @@ jobs:
 
       - name: Run tests
         run: |
-          go test -race -vet=off ./...  -covermode=count -coverprofile=coverage.out
+          go test -race -vet=off ./...  -covermode=atomic -coverprofile=coverage.out
           go tool cover -func=coverage.out -o=coverage.out
       
       # https://github.com/tj-actions/coverage-badge-go
