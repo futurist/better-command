@@ -245,7 +245,7 @@ func New(cmdArgs []string, parts ...string) *Command {
 			if token, err := l.Next(); err != nil {
 				break
 			} else {
-				s := token.String()
+				s := token.Value
 				for strings.Contains(s, "%s") {
 					sanitized := ReplaceShellString(parts[i], token)
 					s = strings.Replace(s, "%s", sanitized, 1)

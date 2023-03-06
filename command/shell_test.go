@@ -46,7 +46,7 @@ func TestReplaceShellString(t *testing.T) {
 				if token, err := l.Next(); err != nil {
 					break
 				} else {
-					s = append(s, ReplaceShellString(token.String(), token))
+					s = append(s, ReplaceShellString(token.Value, token))
 				}
 			}
 			if diff := cmp.Diff(strings.Join(s, ""), tc.want); diff != "" {
