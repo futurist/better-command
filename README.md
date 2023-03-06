@@ -1,5 +1,9 @@
 # better-command
 
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/futurist/better-command)](https://pkg.go.dev/github.com/futurist/better-command)
+[![Build Status](https://github.com/futurist/better-command/workflows/CI/badge.svg)](https://github.com/futurist/better-command/actions?query=workflow%3ATest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/futurist/better-command)](https://goreportcard.com/report/github.com/futurist/better-command)
+
 Go better command run shell commands safely and handily.
 
 More details please check [godoc](https://pkg.go.dev/github.com/futurist/better-command/command)

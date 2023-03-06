@@ -80,7 +80,7 @@ func ReplaceShellString(s string, token *shlex.Token) string {
 	return string(r)
 }
 
-// Command is embeded [exec.Cmd] struct, with some more state to use.
+// Command is embedded [exec.Cmd] struct, with some more state to use.
 type Command struct {
 	*exec.Cmd
 	// Pid is the pid of command after start

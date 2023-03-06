@@ -74,10 +74,6 @@ func (a *Token) Equal(b *Token) bool {
 	return a.Value == b.Value
 }
 
-func (a *Token) String() string {
-	return a.Value
-}
-
 func (a *Token) IsNonEscape() bool {
 	return a.TokenClass == NonEscapingQuoteRuneClass
 }
@@ -417,7 +413,6 @@ func (t *Tokenizer) scanStream() (*Token, error) {
 				case SpaceRuneClass:
 					{
 						if nextRune == '\n' {
-							state = startState
 							token := &Token{
 								TokenClass: startRuneType,
 								TokenType:  tokenType,
