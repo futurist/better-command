@@ -3,7 +3,7 @@
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/futurist/better-command)](https://pkg.go.dev/github.com/futurist/better-command)
 [![Build Status](https://github.com/futurist/better-command/workflows/CI/badge.svg)](https://github.com/futurist/better-command/actions?query=workflow%3ACI)
 [![Go Report Card](https://goreportcard.com/badge/github.com/futurist/better-command)](https://goreportcard.com/report/github.com/futurist/better-command)
-![Coverage](https://github.com/futurist/better-command/blob/badge/badge.svg?branch=badge)
+![Coverage](https://github.com/futurist/better-command/blob/main/.github/badge.svg?branch=badge)
 
 Go better command run shell commands safely and handily.
 
