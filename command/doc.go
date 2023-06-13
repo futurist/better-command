@@ -7,12 +7,14 @@
 //
 // The argument for %s and "%s" will be always safely escaped except $VAR and ${VAR}, thus you can use shell variables in side arguments.
 //
-// Below is true:
+// Below is true and SAFE!!!:
 //
-//	reflect.DeepEqual(
-//		command.NewSh(`echo %s '%s'`, "logs: $HOME/$abc/logs", "logs: $HOME/$abc/logs").Args,
-//		[]string{"sh", "-c", `echo logs\:\ $HOME/$abc/logs logs\:\ \$HOME/\$abc/logs `}
-//	)
+// userID := httprequest.URL.Query().Get("userID") // maybe from a HACKER!!!
+// fmt.Printf("userID: %v", userID) // userID: ;rm -rf /
+// reflect.DeepEqual(
+//     command.NewSh(`echo %s`, userID).Args,
+//     []string{"sh", "-c", "echo \\;rm\\ -rf\\ /"}
+// )
 //
 // The [New] and [NewSh] method will escape any invalid shell characters, to avoid Remote Code Execution (RCE) attack
 // or any form of Shell Injection, the escape will be denoted by below 2 forms:

@@ -20,12 +20,14 @@ go get github.com/futurist/better-command
 ### `New()` with `%s` as placeholder from args
 
 ```go
-// below is true:
+// below is true and SAFE!!!:
 import "github.com/futurist/better-command/command"
 
+userID := httprequest.URL.Query().Get("userID") // maybe from a HACKER!!!
+fmt.Printf("userID: %v", userID) // userID: ;rm -rf /
 reflect.DeepEqual(
-    command.NewSh(`echo %s '%s'`, "logs: $HOME/$abc/logs", "logs: $HOME/$abc/logs").Args,
-    []string{"sh", "-c", `echo logs\:\ $HOME/$abc/logs logs\:\ \$HOME/\$abc/logs `}
+    command.NewSh(`echo %s`, userID).Args,
+    []string{"sh", "-c", "echo \\;rm\\ -rf\\ /"}
 )
 ```
 
